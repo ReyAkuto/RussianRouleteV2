@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔫 Russian Roulette Online</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Oswald:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ── FLASH OVERLAY (efek terkena peluru) ── -->
+  <div id="flash"></div>
+
+  <!-- ── NOTIF BACKDROP ── -->
+  <div id="nb"></div>
+
+  <!-- ── NOTIF BOX ── -->
+  <div id="no">
+    <div id="nbox">
+      <div class="ni" id="ni"></div>
+      <div class="nt" id="nt"></div>
+      <div class="ns" id="ns"></div>
+      <div class="nitems" id="nitems"></div>
+      <div class="nprog"><div class="npb" id="npb"></div></div>
+    </div>
+  </div>
+
+  <!-- ── TOAST ── -->
+  <div id="toast"></div>
+
+  <!-- ── TOOLTIP ── -->
+  <div id="tip"></div>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!--  SITE HEADER                                       -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div class="site-header">
+    <h1>RUSSIAN ROULETTE</h1>
+    <p>MULTIPLAYER • REALTIME • 2 / 3 / 4 PEMAIN</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!--  SCREEN: LOBBY                                     -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div id="screen-lobby" class="screen">
+    <div class="card">
+      <h2 style="margin-bottom:14px;color:var(--red2)">— Masuk ke Arena —</h2>
+
+      <label style="font-size:.7rem;color:var(--text3);letter-spacing:.14em">NAMA PEMAIN</label>
+      <input type="text" id="inp-name" placeholder="Masukkan namamu..." maxlength="16" autocomplete="off">
+      <div id="lb-err" class="error-text hidden"></div>
+
+      <div class="pc-label">JUMLAH PEMAIN</div>
+      <div class="pc-btns">
+        <button class="pc-btn sel" data-n="2" onclick="selCount(2)">2P<span class="pc-sub">Duel</span></button>
+        <button class="pc-btn"     data-n="3" onclick="selCount(3)">3P<span class="pc-sub">Trio</span></button>
+        <button class="pc-btn"     data-n="4" onclick="selCount(4)">4P<span class="pc-sub">Squad</span></button>
+      </div>
+
+      <div class="btn-row mt12">
+        <button class="btn-red btn-full" onclick="createRoom()">➕ BUAT ROOM BARU</button>
+      </div>
+
+      <div class="divider">ATAU BERGABUNG</div>
+
+      <label style="font-size:.7rem;color:var(--text3);letter-spacing:.14em">KODE ROOM</label>
+      <input type="text" id="inp-code" class="code-input" placeholder="XXXX" maxlength="4" autocomplete="off">
+      <button class="btn-ghost btn-full mt8" onclick="joinRoom()">🚪 JOIN ROOM</button>
+    </div>
+
+    <!-- Info cara main -->
+    <div class="card card-dim" style="font-size:.74rem;color:var(--text3);line-height:2">
+      <div style="font-weight:600;font-size:.78rem;color:var(--text2);letter-spacing:.12em;margin-bottom:6px">🎯 CARA MAIN</div>
+      <div>• HP awal <span style="color:var(--text)">5</span> | Chamber bertambah tiap ronde sesuai mode (2P/3P/4P)</div>
+      <div>• Pemain terakhir yang hidup = <span style="color:var(--gold)">MENANG</span></div>
+      <div>• Tembak diri blank → <span style="color:var(--green)">giliran bertahan</span></div>
+      <div>• Starter ronde bergilir → <span style="color:var(--gold)">tiap ronde pemain berbeda yang duluan</span></div>
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+        <span style="color:var(--text)">2P</span> Chamber 3→6 slot (rasio maks 4:6) &nbsp;|&nbsp;
+        <span style="color:var(--text)">3P</span> Chamber 5→8 slot (rasio maks 6:8) &nbsp;|&nbsp;
+        <span style="color:var(--text)">4P</span> Chamber 8→12 slot (rasio maks 8:12)
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!--  SCREEN: WAITING                                   -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div id="screen-waiting" class="screen hidden">
+    <div class="card tc">
+      <h2 style="color:var(--text2);margin-bottom:4px" id="wt">⏳ Menunggu Pemain Lain</h2>
+      <p style="color:var(--text3);font-family:var(--fm);font-size:.74rem;margin-bottom:12px">Bagikan kode ini ke temanmu</p>
+
+      <div class="code-box">
+        <div class="code-box-label">KODE ROOM</div>
+        <div class="code-box-val" id="disp-code"></div>
+      </div>
+
+      <div class="join-slots" id="join-slots"></div>
+
+      <div style="margin-top:8px;font-family:var(--fm);font-size:.74rem;color:var(--text3)" id="wmsg">
+        <span class="pulse-dot"></span>Menunggu koneksi...
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!--  SCREEN: READY (LOBBY PERTEMPURAN)                 -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div id="screen-ready" class="screen hidden">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <h2 style="color:var(--gold)">⚔️ Lobi Pertempuran</h2>
+        <div style="font-family:var(--fm);font-size:.66rem;color:var(--text3)">
+          ROOM: <span style="color:var(--gold)" id="ready-code"></span>
+        </div>
+      </div>
+      <p style="font-family:var(--fm);font-size:.7rem;color:var(--text3);margin-bottom:2px">Semua pemain harus READY untuk memulai</p>
+
+      <div class="ready-grid" id="ready-grid"></div>
+
+      <div class="tc">
+        <button class="btn-green" id="btn-ready" onclick="setReady()" style="padding:12px 44px;font-size:.92rem">✅ READY!</button>
+      </div>
+      <div class="rfoot" id="rfoot"><span class="pulse-dot"></span>Menunggu semua pemain ready...</div>
+    </div>
+
+    <!-- Konfigurasi ronde + starter order -->
+    <div class="card card-dim" id="ready-cfg-card" style="font-size:.68rem;color:var(--text3);font-family:var(--fm);line-height:2.1"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!--  SCREEN: GAME                                      -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div id="screen-game" class="screen hidden">
+
+    <!-- Header ronde & giliran -->
+    <div class="game-header">
+      <div class="gi">ROOM: <span id="g-code">—</span></div>
+      <div class="round-badge">RONDE <span id="g-round">1</span></div>
+      <div class="gi" id="g-turn">—</div>
+    </div>
+
+    <!-- Grid kartu pemain (diisi JS) -->
+    <div id="pgrid" class="pgrid pg2"></div>
+
+    <!-- Chamber panel -->
+    <div class="chamber-panel">
+      <div class="ch-top">
+        <div class="ch-left">
+          <div class="ch-lbl">🔲 CHAMBER — RASIO PELURU</div>
+          <div class="ratio-block">
+            <span class="ratio-b" id="ratio-b">?</span>
+            <span class="ratio-sep">:</span>
+            <span class="ratio-s" id="ratio-s">?</span>
+          </div>
+          <div class="ratio-sub">PELURU : SLOT TERSISA</div>
+          <div class="bar-track"><div class="bar-fill" id="ratio-bar" style="width:0%"></div></div>
+        </div>
+        <div class="ch-right">
+          <div class="ch-ctr">SLOT <span id="ch-idx">1</span>/<span id="ch-tot">3</span></div>
+          <div class="ch-ri" id="ch-ri">RONDE 1</div>
+          <div class="ch-ri" id="ch-cfg">3 SLOT — 1 PELURU</div>
+        </div>
+      </div>
+      <div class="ch-slots" id="ch-slots"></div>
+    </div>
+
+    <!-- Target tembakan -->
+    <div id="shoot-sec">
+      <div class="shoot-sec-label">🎯 PILIH TARGET TEMBAKAN</div>
+      <div class="targets-panel" id="tpanel"></div>
+    </div>
+
+    <!-- Log aksi + Chat -->
+    <div class="bottom-panels">
+      <div class="panel-box">
+        <div class="panel-hd">📋 LOG AKSI</div>
+        <div class="log-body" id="action-log"></div>
+      </div>
+      <div class="panel-box">
+        <div class="panel-hd">💬 CHAT</div>
+        <div class="chat-body" id="chat-body"></div>
+        <div class="chat-ir">
+          <input type="text" id="ci" class="ci" placeholder="Kirim pesan..." maxlength="80" autocomplete="off">
+          <button class="btn-send" onclick="sendChat()">➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!--  SCREEN: FINISHED                                  -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div id="screen-finished" class="screen hidden">
+    <div class="card fin-card">
+      <div class="fin-trophy" id="fin-trophy">🏆</div>
+      <div class="fin-title"  id="fin-title"></div>
+      <div class="fin-sub"    id="fin-sub"></div>
+      <div class="fin-stats"  id="fin-stats"></div>
+
+      <div id="rematch-sec" style="margin-top:16px">
+        <button class="btn-green" id="btn-rm" onclick="requestRematch()"
+          style="padding:12px 36px;font-size:.9rem;margin-bottom:10px">
+          🔄 MAIN LAGI (Room Sama)
+        </button>
+        <div id="rm-status" style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
+        <div id="rm-msg"    style="font-family:var(--fm);font-size:.7rem;color:var(--text3);letter-spacing:.07em"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Logic -->
+  <script src="game.js"></script>
+
+</body>
+</html>
